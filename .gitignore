@@ -1,3 +1,7 @@
+#
+# Python .gitignore from the GitHub original: https://gist.github.com/emaballarin/001eeb43cc7c542edc485e9ef2811f94
+#
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -20,6 +24,7 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -152,9 +157,83 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+# JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+# Comment next *TWO* lines if willing to share relavant settings via VCS
+.idea/
+.idea/**
+
+.idea/**/aws.xml
+.idea/**/contentModel.xml
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/dataSources/
+.idea/**/dbnavigator.xml
+.idea/**/dictionaries
+.idea/**/dynamic.xml
+.idea/**/gradle.xml
+.idea/**/libraries
+.idea/**/mongoSettings.xml
+.idea/**/shelf
+.idea/**/sqlDataSources.xml
+.idea/**/tasks.xml
+.idea/**/uiDesigner.xml
+.idea/**/usage.statistics.xml
+.idea/**/workspace.xml
+.idea/*.iml
+.idea/artifacts
+.idea/caches/build_file_checksums.ser
+.idea/compiler.xml
+.idea/httpRequests
+.idea/jarRepositories.xml
+.idea/modules
+.idea/modules.xml
+.idea/replstate.xml
+.idea/sonarlint/
+.idea_modules/
+out/
+*.iml
+*.ipr
+*.iws
+
+# IDEA JIRA plugin
+atlassian-ide-plugin.xml
+
+# IDEA Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# CMake
+cmake-build-*/
+
+# VSCode
+.vscode/*
+.ionide/
+**/.ionide/*
+.history/
+*.vsix
+
+# Old KDE settings
+.directory
+
+# Typesheds
+typeshed
+typeshed/
+**/typeshed/*
+
+# "Large" dataset
+*.tar.gz
+*-ubyte
+*-ubyte.gz
+
+# PyTorch saved/pickled objects
+*.pt
+*.pth
+
+# neptune.ai local files
+.neptune/
+
+# WandB local files
+.wandb/
