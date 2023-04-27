@@ -3,6 +3,8 @@
 #
 # ~~ IMPORTS ~~
 import copy
+from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -32,6 +34,8 @@ class TwoHeadStudent(nn.Module):
     ):
         super().__init__()
 
+        self.in_size = in_size
+
         self.neck: nn.Module = nn.Sequential(
             nn.Linear(in_size, hid_size, bias=False),
             copy.deepcopy(activation_fx_module),
@@ -50,6 +54,25 @@ class TwoHeadStudent(nn.Module):
     def flip_switch(self) -> None:
         self._switch: bool = not self._switch
         model_reqgrad_(self.heads[not self._switch], False)
+
+    def trainable_parameters(
+        self, do_scale: bool = True, lr: Optional[float] = None
+    ) -> List[Dict[str, Tensor]]:
+        params = []
+        params += [{"params": self.neck.parameters()}]
+        if do_scale:
+            if lr is None:
+                raise ValueError("lr must be specified if do_scale is True")
+            params += [{"params": self.heads[self._switch], "lr": lr / self.in_size}]
+
+        else:
+            params += [{"params": self.heads[self._switch]}]
+
+        params += [
+            {"params": self.fxout.parameters()}
+        ]  # Maybe the activation has learnable parameters. Who knows?
+
+        return params
 
     def forward(
         self, x: Tensor, return_both_heads
