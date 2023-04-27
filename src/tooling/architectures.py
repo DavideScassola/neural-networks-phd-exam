@@ -95,7 +95,7 @@ class TwoHeadStudent(nn.Module):
 
 
 class DoubleTeacher(nn.Module):
-    """One Module, Two Teachers!"""
+    """One Module, Two Teachers: it's a School!"""
 
     def __init__(
         self,
@@ -134,7 +134,7 @@ class DoubleTeacher(nn.Module):
 
     def flip_switch(self) -> None:
         self._switch: bool = not self._switch
-        model_reqgrad_(self.heads[not self._switch], False)
+        model_reqgrad_(self.school[not self._switch], False)
 
     def forward(
         self, x: Tensor, return_both_teachers
