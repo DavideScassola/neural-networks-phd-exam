@@ -13,8 +13,8 @@ import torch as th
 from torch import nn
 from torch import Tensor
 
-from ..tooling.activations.serf import SERF
-from ..tooling.util.overlap import tensor_pair_from_overlap
+from activations.serf import SERF
+from util.overlap import tensor_pair_from_overlap
 
 
 def model_reqgrad_(model: nn.Module, set_to: Optional[bool]) -> None:
@@ -53,7 +53,7 @@ class TwoHeadStudent(nn.Module):
 
     def flip_switch(self) -> None:
         self._switch: bool = not self._switch
-        model_reqgrad_(self.heads[not self._switch], False)
+        model_reqgrad_(self.heads[int(not self._switch)], False)
 
     def trainable_parameters(
         self, do_scale: bool = True, lr: Optional[float] = None
@@ -134,7 +134,7 @@ class DoubleTeacher(nn.Module):
 
     def flip_switch(self) -> None:
         self._switch: bool = not self._switch
-        model_reqgrad_(self.school[not self._switch], False)
+        model_reqgrad_(self.school[int(not self._switch)], False)
 
     def forward(
         self, x: Tensor, return_both_teachers
@@ -163,3 +163,9 @@ def goldt_school_from_overlap(out_size: int, overlap: Tensor):
     return DoubleTeacher(
         500, 1, out_size, init_features_from=tensor_pair_from_overlap(overlap, 500)
     )
+
+# TEST
+if __name__ == '__main__':
+    double_teacher = goldt_school(2)
+    student = goldt_student(2)
+
