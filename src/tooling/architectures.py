@@ -47,7 +47,7 @@ class TwoHeadStudent(nn.Module):
             ]
         )
         for head in self.heads:
-            nn.init.normal(head.weight, 0., 0.001)
+            nn.init.normal_(head.weight, 0., 0.001)
 
         self.fxout: nn.Module = copy.deepcopy(activation_fx_module)
 
@@ -66,10 +66,10 @@ class TwoHeadStudent(nn.Module):
         if do_scale:
             if lr is None:
                 raise ValueError("lr must be specified if do_scale is True")
-            params += [{"params": self.heads[self._switch], "lr": lr / self.in_size}]
+            params += [{"params": self.heads[int(self._switch)], "lr": lr / self.in_size}]
 
         else:
-            params += [{"params": self.heads[self._switch]}]
+            params += [{"params": self.heads[int(self._switch)]}]
 
         params += [
             {"params": self.fxout.parameters()}
@@ -81,12 +81,12 @@ class TwoHeadStudent(nn.Module):
         self, x: Tensor, return_both_heads
     ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
         xneck = self.neck(x)
-        xpost = self.heads[self._switch](xneck)
+        xpost = self.heads[int(self._switch)](xneck)
         xpost = self.fxout(xpost)
 
         if return_both_heads:
             with th.no_grad():
-                xpre = self.heads[not self._switch](xneck)
+                xpre = self.heads[int(not self._switch)](xneck)
                 xpre = self.fxout(xpre)
 
             if self._switch:
@@ -175,3 +175,10 @@ if __name__ == '__main__':
     double_teacher = goldt_school(2)
     student = goldt_student(2)
     overlapped_teachers = goldt_school_from_overlap(2, overlap=0.5)
+    dummy_data = th.normal(0., 1., size=(1, 500))
+    double_teacher(dummy_data, False)
+    double_teacher(dummy_data, True)
+    overlapped_teachers(dummy_data, False)
+    overlapped_teachers(dummy_data, True)
+    student(dummy_data, False)
+    student(dummy_data, True)
