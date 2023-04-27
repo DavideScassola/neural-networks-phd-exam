@@ -48,7 +48,7 @@ class TwoHeadStudent(nn.Module):
         )
         for head in self.heads:
             nn.init.normal(head.weight, 0., 0.001)
-            
+
         self.fxout: nn.Module = copy.deepcopy(activation_fx_module)
 
         self._switch: bool = True
@@ -145,10 +145,10 @@ class DoubleTeacher(nn.Module):
     def forward(
         self, x: Tensor, return_both_teachers
     ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
-        xpost = self.school[self._switch](x)
+        xpost = self.school[int(self._switch)](x)
 
         if return_both_teachers:
-            xpre = self.school[not self._switch](x)
+            xpre = self.school[int(not self._switch)](x)
             if self._switch:
                 return xpre, xpost
             else:
