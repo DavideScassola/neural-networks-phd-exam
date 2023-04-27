@@ -46,6 +46,9 @@ class TwoHeadStudent(nn.Module):
                 nn.Linear(hid_size, out_size, bias=False),
             ]
         )
+        for head in self.heads:
+            nn.init.normal(head.weight, 0., 0.001)
+            
         self.fxout: nn.Module = copy.deepcopy(activation_fx_module)
 
         self._switch: bool = True
@@ -120,6 +123,7 @@ class DoubleTeacher(nn.Module):
             nn.Linear(hid_size, out_size, bias=False),
             copy.deepcopy(activation_fx_module),
         )
+        nn.init.normal_(self.teacher_1[2].weight, 0., 1.)
 
         self.teacher_2 = nn.Sequential(
             self.t2_features,
@@ -127,6 +131,8 @@ class DoubleTeacher(nn.Module):
             nn.Linear(hid_size, out_size, bias=False),
             copy.deepcopy(activation_fx_module),
         )
+        nn.init.normal_(self.teacher_2[2].weight, 0., 1.)
+
         self.school = nn.ModuleList([self.teacher_1, self.teacher_2])
 
         self._switch: bool = True
@@ -168,4 +174,4 @@ def goldt_school_from_overlap(out_size: int, overlap: Tensor):
 if __name__ == '__main__':
     double_teacher = goldt_school(2)
     student = goldt_student(2)
-
+    overlapped_teachers = goldt_school_from_overlap(2, overlap=0.5)
