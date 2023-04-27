@@ -157,15 +157,15 @@ class DoubleTeacher(nn.Module):
             return xpost
 
 
-def goldt_student(out_size: int):
+def goldt_student(out_size: int) -> DoubleTeacher:
     return TwoHeadStudent(500, 2, out_size)
 
 
-def goldt_school(out_size: int):
+def goldt_school(out_size: int) -> DoubleTeacher:
     return DoubleTeacher(500, 1, out_size)
 
 
-def goldt_school_from_overlap(out_size: int, overlap: Tensor):
+def goldt_school_from_overlap(out_size: int, overlap: Tensor) -> DoubleTeacher:
     return DoubleTeacher(
         500, 1, out_size, init_features_from=tensor_pair_from_overlap(overlap, 500)
     )
