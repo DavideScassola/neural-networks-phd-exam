@@ -66,10 +66,10 @@ class TwoHeadStudent(nn.Module):
         if do_scale:
             if lr is None:
                 raise ValueError("lr must be specified if do_scale is True")
-            params += [{"params": self.heads[int(self._switch)], "lr": lr / self.in_size}]
+            params += [{"params": self.heads[int(self._switch)].parameters(), "lr": lr / self.in_size}]
 
         else:
-            params += [{"params": self.heads[int(self._switch)]}]
+            params += [{"params": self.heads[int(self._switch)].parameters()}]
 
         params += [
             {"params": self.fxout.parameters()}
@@ -174,11 +174,11 @@ def goldt_school_from_overlap(out_size: int, overlap: Tensor):
 if __name__ == '__main__':
     double_teacher = goldt_school(2)
     student = goldt_student(2)
-    overlapped_teachers = goldt_school_from_overlap(2, overlap=0.5)
+    overlapped_teachers = goldt_school_from_overlap(1, overlap=0.5)
     dummy_data = th.normal(0., 1., size=(1, 500))
     double_teacher(dummy_data, False)
     double_teacher(dummy_data, True)
-    overlapped_teachers(dummy_data, False)
-    overlapped_teachers(dummy_data, True)
     student(dummy_data, False)
     student(dummy_data, True)
+    overlapped_teachers(dummy_data, False)
+    overlapped_teachers(dummy_data, True)
