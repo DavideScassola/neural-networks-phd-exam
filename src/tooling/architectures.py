@@ -184,18 +184,18 @@ class DoubleTeacher(nn.Module):
             else:
                 return xpost
             
-    def sample_batch(self, n: int, return_both_teachers: bool = False):
+    def sample_batch(self, n: int, return_both_teachers: bool = False, output_noise_std: float = 0.):
         """Generate iid vectors to be fed to the teacher network."""
         
         X1 = th.normal(0.0, 1.0, size=(n, self.in_size)) # TODO: check this
         if not return_both_teachers:
             y1 = self(X1, return_both_teachers=return_both_teachers)
-            #y1 += th.randn(y1.size())
+            y1 += th.randn(y1.size())*output_noise_std
             return X1, y1
         else:
             y1, y2 = self(X1, return_both_teachers=return_both_teachers)
-            #y1 += th.randn(y1.size())
-            #y2 += th.randn(y2.size())
+            y1 += th.randn(y1.size())*output_noise_std
+            y2 += th.randn(y2.size())*output_noise_std
             return X1, y1, y2
             
 
