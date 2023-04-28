@@ -4,9 +4,9 @@ import torch
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 
-from .src.tooling.architectures import DoubleTeacher
-from .src.tooling.architectures import TwoHeadStudent
-from .src.tooling.data.dataset import SupervisedLearingDataset
+from src.tooling.architectures import DoubleTeacher
+from src.tooling.architectures import TwoHeadStudent
+from src.tooling.data.dataset import SupervisedLearingDataset
 
 N = 10_000
 INPUT_DIMENSION = 500
@@ -92,7 +92,7 @@ def train_second_head(
     dataset_teacher1: SupervisedLearingDataset,
     dataset_teacher2: SupervisedLearingDataset,
 ):
-    """ Train the second head of the student network on second teacher dataset."""
+    """ Train the second head of the student network on first and second teacher dataset."""
 
     optimizer = torch.optim.SGD(
         student.trainable_parameters(lr=1), lr=1

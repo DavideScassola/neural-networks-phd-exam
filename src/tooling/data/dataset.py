@@ -24,7 +24,9 @@ class SupervisedLearingDataset:
         self.y_test = y[train_size:]
 
 
-    def get_train_loader(self, **loader_kwargs) -> DataLoader:
+    def get_train_loader(
+        self, **loader_kwargs
+    ) -> DataLoader:
         """ Return a DataLoader object containing the Supervised Learning Dataset """
 
         return DataLoader(TensorDataset(self.x_train, self.x_test), **loader_kwargs)

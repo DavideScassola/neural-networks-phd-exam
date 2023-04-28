@@ -11,10 +11,10 @@ from typing import Union
 from warnings import warn
 
 import torch as th
-from activations.serf import SERF
+from src.tooling.activations.serf import SERF
 from torch import nn
 from torch import Tensor
-from util.overlap import tensor_pair_from_overlap
+from src.tooling.util.overlap import tensor_pair_from_overlap
 
 
 def model_reqgrad_(model: nn.Module, set_to: Optional[bool]) -> None:
