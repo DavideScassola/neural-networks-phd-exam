@@ -57,10 +57,10 @@ def tensor_pair_from_angle(
 def tensor_pair_from_overlap(
     overlap: Union[int, float, Tensor], length: int, device: Optional[str] = None
 ) -> Tuple[Tensor, Tensor]:
-    """Returns a pair of normalized torch.Tensors with given overlap."""
+    """Returns a pair of normalized torch. Tensors with given overlap."""
 
     # Overlap conversion to tensor
-    if not th.is_tensor(overlap):
+    if not isinstance(overlap, Tensor):
         overlap = th.tensor(overlap)
 
     return tensor_pair_from_angle(th.acos(overlap), length, device)
