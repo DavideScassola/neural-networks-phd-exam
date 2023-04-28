@@ -9,8 +9,8 @@ from src.tooling.architectures import TwoHeadStudent
 from src.tooling.data.dataset import SupervisedLearingDataset
 from src.tooling.architectures import tensor_pair_from_overlap
 import matplotlib.pyplot as plt
-import seaborn as sns
 import random
+import copy
 
 N = 2_000_000
 INPUT_DIMENSION = 500
@@ -23,8 +23,6 @@ TEST_SIZE = 1000
 LABELS_NOISE_STD = 0.01
 FIRST_HEAD_BATCHES = N // BATCH_SIZE
 SECOND_HEAD_BATCHES = FIRST_HEAD_BATCHES
-
-sns.set_palette('viridis')
 
 
 def train(
@@ -120,6 +118,14 @@ def overlapped_double_teacher(
 
 
 def contiual_learning_experiment(*, overlap=0.0):
+    
+    student = TwoHeadStudent(
+        in_size=INPUT_DIMENSION,
+        out_size=OUTPUT_DIMENSION,
+        hid_size=STUDENT_HIDDEN_UNITS,
+    )
+
+    
     double_teacher = overlapped_double_teacher(
         in_size=INPUT_DIMENSION,
         out_size=OUTPUT_DIMENSION,
@@ -127,11 +133,6 @@ def contiual_learning_experiment(*, overlap=0.0):
         overlap=overlap,
     )
 
-    student = TwoHeadStudent(
-        in_size=INPUT_DIMENSION,
-        out_size=OUTPUT_DIMENSION,
-        hid_size=STUDENT_HIDDEN_UNITS,
-    )
 
     training_losses_pre_switch = train_student(
         student=student, double_teacher=double_teacher
@@ -181,21 +182,79 @@ def contiual_learning_experiment(*, overlap=0.0):
 
     return (training_losses_pre_switch["first_head"]+training_losses_post_switch["first_head"], training_losses_pre_switch["second_head"]+training_losses_post_switch["second_head"])
 
-def main():
 
-    fig, axes = plt.subplots(1,2,figsize=(20, 10))
-    sm = plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(vmin=0, vmax=1))
+def multiple_overlaps_test():
 
-    for overlap in list(torch.arange(0,1.1, 0.1)):
-        first_head_losses, second_head_losses = contiual_learning_experiment(overlap=overlap)
+    og_student = TwoHeadStudent(
+        in_size=INPUT_DIMENSION,
+        out_size=OUTPUT_DIMENSION,
+        hid_size=STUDENT_HIDDEN_UNITS,
+    )
+
+    for overlap in [0.0, 0.2, 0.5, 0.8, 1.0]:
+
+        student = copy.deepcopy(og_student)
+
+        double_teacher = overlapped_double_teacher(
+            in_size=INPUT_DIMENSION,
+            out_size=OUTPUT_DIMENSION,
+            hid_size=TEACHER_HIDDEN_UNITS,
+            overlap=overlap,
+        )
+
+        training_losses_pre_switch = train_student(
+            student=student, double_teacher=double_teacher
+        )
+
+        test_loss1_pre_switch = evaluate_on_test(
+            student=student, double_teacher=double_teacher, return_both_heads=False
+        )
+            
+        student.flip_switch()
+        double_teacher.flip_switch()
+
+        training_losses_post_switch = train_student(
+            student=student, double_teacher=double_teacher
+        )
+        
+        test_loss1_post_switch, test_loss2_post_switch = evaluate_on_test(
+            student=student, double_teacher=double_teacher, return_both_heads=True
+        )
+
+        plt.cla()
+        fig, axes = plt.subplots(1,2,figsize=(20, 10), sharey=True)
+        first_head_losses, second_head_losses = (training_losses_pre_switch["first_head"]+training_losses_post_switch["first_head"], 
+                                                 training_losses_pre_switch["second_head"]+training_losses_post_switch["second_head"])
         axes[0].plot(first_head_losses, linewidth=1.0)
         axes[0].set_yscale('log')
         axes[1].plot(second_head_losses, linewidth=1.0)
         axes[1].set_yscale('log')
         # plt.show()
-    
-    plt.colorbar(sm, ax=axes)
-    plt.savefig('whole_training.png', dpi=140)
+        plt.suptitle(f"Training losses for student heads with {overlap} overlap in teacher weights", fontweight='bold', fontsize=20)
+        plt.savefig(f'whole_training_overlap_{overlap}.png', dpi=140)
+        plt.cla()
+
+    return test_loss1_pre_switch, test_loss1_post_switch, test_loss2_post_switch
+
+
+def main():
+
+    # sm = plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(vmin=0, vmax=1))
+
+    # for overlap in [0.0, 0.2, 0.5, 0.8, 1.0]:
+    #     plt.cla()
+    #     fig, axes = plt.subplots(1,2,figsize=(20, 10))
+    #     first_head_losses, second_head_losses = contiual_learning_experiment(overlap=overlap)
+    #     axes[0].plot(first_head_losses, linewidth=1.0)
+    #     axes[0].set_yscale('log')
+    #     axes[1].plot(second_head_losses, linewidth=1.0)
+    #     axes[1].set_yscale('log')
+    #     # plt.show()
+    #     plt.suptitle(f"Training losses for student heads with {overlap} overlap in teacher weights")
+    #     plt.savefig(f'whole_training_overlap_{overlap}.png', dpi=140)
+    #     plt.cla()
+
+    multiple_overlaps_test()
 
 
 if __name__ == "__main__":
