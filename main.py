@@ -7,6 +7,7 @@ from torch.utils.data.dataloader import DataLoader
 from src.tooling.architectures import DoubleTeacher
 from src.tooling.architectures import TwoHeadStudent
 from src.tooling.data.dataset import SupervisedLearingDataset
+from src.tooling.architectures import tensor_pair_from_overlap
 
 N = 10_000
 INPUT_DIMENSION = 500
@@ -105,8 +106,8 @@ def train_second_head(
     epoch_test_losses_dataset1 = []
     epoch_test_losses_dataset2 = []
 
-    student.flip_switch()
-    assert False
+    # student.flip_switch()
+    # TODO: Is this really necessary ?
 
     for _ in range(SECOND_HEAD_EPOCHS):
         train_loss = train_epoch(
@@ -133,25 +134,40 @@ def train_second_head(
 
 
 def get_teacher_dataset(
-    *, double_teacher: DoubleTeacher, head: int
+    *, double_teacher: DoubleTeacher, teacher_index: int
 ):
     """Generate iid vectors to be fed to the teacher network."""
 
     X1 = torch.normal(0.0, 1.0, size=(N, INPUT_DIMENSION))
-    y1 = double_teacher(X1, return_both_teachers=True)[head]
+    y1 = double_teacher(X1, return_both_heads=True)[teacher_index]
     return SupervisedLearingDataset(x=X1, y=y1, train_proportion=TRAIN_PROPORTION)
 
 
-def contiual_learning_experiment():
-    # TODO: parametrize overlap
-    double_teacher = DoubleTeacher(
+def overlapped_double_teacher(
+    *, in_size: int, out_size: int, hid_size: int, overlap
+) -> DoubleTeacher:
+    return DoubleTeacher(
+        in_size,
+        hid_size,
+        out_size,
+        init_features_from=tensor_pair_from_overlap(overlap, in_size),
+    )
+
+
+def contiual_learning_experiment(*, overlap=0.0):
+    double_teacher = overlapped_double_teacher(
         in_size=INPUT_DIMENSION,
         out_size=OUTPUT_DIMENSION,
         hid_size=TEACHER_HIDDEN_UNITS,
+        overlap=overlap,
     )
 
-    dataset_teacher1 = get_teacher_dataset(double_teacher=double_teacher, head=0)
-    dataset_teacher2 = get_teacher_dataset(double_teacher=double_teacher, head=1)
+    dataset_teacher1 = get_teacher_dataset(
+        double_teacher=double_teacher, teacher_index=0
+    )
+    dataset_teacher2 = get_teacher_dataset(
+        double_teacher=double_teacher, teacher_index=1
+    )
 
     student = TwoHeadStudent(
         in_size=INPUT_DIMENSION,
