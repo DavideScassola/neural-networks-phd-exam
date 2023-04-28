@@ -8,133 +8,101 @@ from src.tooling.architectures import DoubleTeacher
 from src.tooling.architectures import TwoHeadStudent
 from src.tooling.data.dataset import SupervisedLearingDataset
 from src.tooling.architectures import tensor_pair_from_overlap
+import matplotlib.pyplot as plt
+import random
 
-N = 10_000
+N = 1_000_000
 INPUT_DIMENSION = 500
 TEACHER_HIDDEN_UNITS = 1
 STUDENT_HIDDEN_UNITS = 2
 OUTPUT_DIMENSION = 1
 TRAIN_PROPORTION = 0.8
-FIRST_HEAD_EPOCHS = 1
-SECOND_HEAD_EPOCHS = 1
-TRAIN_LOADER_PARAMS = dict(batch_size=32, shuffle=True)
+BATCH_SIZE = 320
+TEST_SIZE = 1000
+FIRST_HEAD_BATCHES = N // BATCH_SIZE
+SECOND_HEAD_BATCHES = FIRST_HEAD_BATCHES
 
 
-def train_epoch(
-    *, student: TwoHeadStudent, optimizer: torch.optim.Optimizer,
-    train_loader: DataLoader, loss_fn
+def train(
+    *,
+    student: TwoHeadStudent,
+    optimizer: torch.optim.Optimizer,
+    loss_fn,
+    batches: int,
+    teacher: DoubleTeacher,
 ):
-    """ Training epoch for the student network. Specify the head [0,1] to be trained. """
+    """Training epoch for the student network. Specify the head [0,1] to be trained."""
 
     student.train()
 
     # Metrics
-    running_train_loss = []
+    losses = []
+    
+    if student._switch:
+        pass
 
-    for x_batch, y_batch in train_loader:
+    for _ in range(batches):
+        x_batch, y_batch = teacher.sample_batch(n=BATCH_SIZE)
         optimizer.zero_grad()
         out = student(x_batch, return_both_heads=False)
         loss = loss_fn(out, y_batch)
         loss.backward()
         optimizer.step()
-        running_train_loss.append(loss.item())
+        losses.append(loss.item())
+        
+        if random.random() > 0.95:
+            print(f"{loss.item()=}")
 
-    return sum(running_train_loss) / len(train_loader.dataset)
+    return losses
 
 
 def evaluate_on_test(
-    *, student: TwoHeadStudent, dataset: SupervisedLearingDataset, loss_fn, head: int
+    *,
+    student: TwoHeadStudent,
+    double_teacher: DoubleTeacher,
+    return_both_heads: bool,
 ):
-    """ Evaluate the student network on the teacher labels. """
+    """Evaluate the student network on the teacher labels."""
+    
+    loss_fn = nn.MSELoss()
 
     with torch.no_grad():
         student.train(False)
 
-        return loss_fn(student(dataset.x_test, return_both_heads=True)[head], dataset.y_test).mean().item()
+        if not return_both_heads:
+            # Only when testing first head
+            x_test, y_test = double_teacher.sample_batch(
+                TEST_SIZE, return_both_teachers=False
+            )
+            return (
+                loss_fn(student(x_test, return_both_heads=False), y_test).item()
+            )
+        else:
+            x_test, y_test1, y_test2 = double_teacher.sample_batch(
+                TEST_SIZE, return_both_teachers=True
+            )
+            out1, out2 = student(x_test, return_both_heads=True)
+            loss1 = loss_fn(out1, y_test1).item()
+            loss2 = loss_fn(out2, y_test2).item()
+            return loss1, loss2
 
 
-def train_first_head(
-    *, student: TwoHeadStudent, dataset: SupervisedLearingDataset
+def train_student(
+    *,
+    student: TwoHeadStudent,
+    double_teacher: DoubleTeacher,
 ):
-    """ Train the first head of the student network on first teacher dataset."""
-
     optimizer = torch.optim.SGD(student.trainable_parameters(lr=1), lr=1)
     loss_fn = nn.MSELoss()
 
-    train_loader = dataset.get_train_loader(**TRAIN_LOADER_PARAMS)
-
-    epoch_train_losses = []
-    epoch_test_losses = []
-
-    for _ in range(FIRST_HEAD_EPOCHS):
-        train_loss = train_epoch(
-            student=student,
-            optimizer=optimizer,
-            train_loader=train_loader,
-            loss_fn=loss_fn
-        )
-
-        test_loss = evaluate_on_test(
-            student=student, dataset=dataset, loss_fn=loss_fn, head=0
-        )
-
-        epoch_train_losses.append(train_loss)
-        epoch_test_losses.append(test_loss)
-
-        print(f"{train_loss=}")
-
-    return epoch_train_losses, epoch_test_losses
-
-
-def train_second_head(
-    *,
-    student: TwoHeadStudent,
-    dataset_teacher1: SupervisedLearingDataset,
-    dataset_teacher2: SupervisedLearingDataset,
-):
-    """ Train the second head of the student network on first and second teacher dataset."""
-
-    optimizer = torch.optim.SGD(
-        student.trainable_parameters(lr=1), lr=1
+    train_losses = train(
+        student=student, optimizer=optimizer, teacher=double_teacher, loss_fn=loss_fn, batches=FIRST_HEAD_BATCHES
     )
-    loss_fn = nn.MSELoss()
 
-    train_loader = dataset_teacher2.get_train_loader(**TRAIN_LOADER_PARAMS)
-
-    epoch_train_losses = []
-    epoch_test_losses_dataset1 = []
-    epoch_test_losses_dataset2 = []
-
-    student.flip_switch()
-    # TODO: Is this really necessary ?
-
-    for _ in range(SECOND_HEAD_EPOCHS):
-        train_loss = train_epoch(
-            student=student,
-            optimizer=optimizer,
-            train_loader=train_loader,
-            loss_fn=loss_fn
-        )
-
-        dataset1_test_loss = evaluate_on_test(
-            student=student, dataset=dataset_teacher1, loss_fn=loss_fn, head=0
-        )
-        dataset2_test_loss = evaluate_on_test(
-            student=student, dataset=dataset_teacher2, loss_fn=loss_fn, head=1
-        )
-
-        epoch_train_losses.append(train_loss)
-        epoch_test_losses_dataset1.append(dataset1_test_loss)
-        epoch_test_losses_dataset2.append(dataset2_test_loss)
-
-        print(f"{train_loss=}")
-
-    return epoch_train_losses, epoch_test_losses_dataset1, epoch_test_losses_dataset2
+    return train_losses
 
 
-def get_teacher_dataset(
-    *, double_teacher: DoubleTeacher, teacher_index: int
-):
+def get_teacher_dataset(*, double_teacher: DoubleTeacher, teacher_index: int):
     """Generate iid vectors to be fed to the teacher network."""
 
     X1 = torch.normal(0.0, 1.0, size=(N, INPUT_DIMENSION))
@@ -162,31 +130,48 @@ def contiual_learning_experiment(*, overlap=0.0):
         overlap=overlap,
     )
 
-    dataset_teacher1 = get_teacher_dataset(
-        double_teacher=double_teacher, teacher_index=0
-    )
-    dataset_teacher2 = get_teacher_dataset(
-        double_teacher=double_teacher, teacher_index=1
-    )
-
     student = TwoHeadStudent(
         in_size=INPUT_DIMENSION,
         out_size=OUTPUT_DIMENSION,
         hid_size=STUDENT_HIDDEN_UNITS,
     )
 
-    train_first_head(student=student, dataset=dataset_teacher1)
-
-    train_second_head(
-        student=student,
-        dataset_teacher1=dataset_teacher1,
-        dataset_teacher2=dataset_teacher2,
+    training_losses = train_student(
+        student=student, double_teacher=double_teacher
     )
 
+    test_loss1_pre_switch = evaluate_on_test(
+        student=student, double_teacher=double_teacher, return_both_heads=False
+    )
+    
+    plt.plot(training_losses, label = "pre switch")
+    plt.legend()
+    plt.savefig('pre_switch.png')
+        
+    student.flip_switch()
+    double_teacher.flip_switch()
+
+    training_losses = train_student(
+        student=student, double_teacher=double_teacher
+    )
+    
+    test_loss1_post_switch, test_loss2_post_switch = evaluate_on_test(
+        student=student, double_teacher=double_teacher, return_both_heads=True
+    )
+    
+    plt.cla()
+    plt.plot(training_losses, label = "post switch")
+    plt.legend()
+    plt.savefig('post_switch.png')
+    
+    
+    print(f"{test_loss1_pre_switch=}")
+    print(f"{test_loss1_post_switch=}")
+    print(f"{test_loss2_post_switch=}")
 
 def main():
-    contiual_learning_experiment()
+    contiual_learning_experiment(overlap=1.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

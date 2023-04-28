@@ -57,6 +57,7 @@ class TwoHeadStudent(nn.Module):
     def flip_switch(self) -> None:
         self._switch: bool = not self._switch
         model_reqgrad_(self.heads[int(not self._switch)], False)
+        model_reqgrad_(self.heads[int(self._switch)], True)
 
     def trainable_parameters(
         self, do_scale: bool = True, lr: Optional[float] = None
@@ -121,6 +122,9 @@ class DoubleTeacher(nn.Module):
         activation_fx_module=SERF(),
     ) -> None:
         super().__init__()
+        
+        self.in_size = in_size
+        self.out_size = out_size
 
         self.t1_features = nn.Linear(in_size, hid_size, bias=False)
         self.t2_features = nn.Linear(in_size, hid_size, bias=False)
@@ -179,6 +183,21 @@ class DoubleTeacher(nn.Module):
                     return xpost, xpre
             else:
                 return xpost
+            
+    def sample_batch(self, n: int, return_both_teachers: bool = False):
+        """Generate iid vectors to be fed to the teacher network."""
+        
+        X1 = th.normal(0.0, 1.0, size=(n, self.in_size)) # TODO: check this
+        if not return_both_teachers:
+            y1 = self(X1, return_both_teachers=return_both_teachers)
+            #y1 += th.randn(y1.size())
+            return X1, y1
+        else:
+            y1, y2 = self(X1, return_both_teachers=return_both_teachers)
+            #y1 += th.randn(y1.size())
+            #y2 += th.randn(y2.size())
+            return X1, y1, y2
+            
 
 
 def goldt_student(out_size: int) -> TwoHeadStudent:
