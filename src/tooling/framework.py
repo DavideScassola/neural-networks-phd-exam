@@ -1,22 +1,24 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from typing import Optional
 
 import architectures as arc
 import torch as th
-from architectures import DoubleTeacher
 from architectures import TwoHeadStudent
 from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
+# from architectures import DoubleTeacher
 
-def teacher_input_data(data_size: int = 1000, device: Optional[str] = None) -> "Tensor":
+
+def teacher_input_data(data_size: int = 1000, device: Optional[str] = None) -> Tensor:
     """Generate iid vectors to be fed to the teacher network."""
 
     return th.normal(0.0, 1.0, size=(data_size, 500), device=device)
 
 
-def teacher_dataset(data_size: int, overlap: "Tensor") -> "DataLoader":
+def teacher_dataset(data_size: int, overlap: Tensor) -> DataLoader:
     """Generate labels to be used by the student during training or testing phases."""
 
     # Store the labels generated from both teachers
@@ -41,8 +43,8 @@ def teacher_dataset(data_size: int, overlap: "Tensor") -> "DataLoader":
 
 
 def student_training(
-    student: "TwoHeadStudent",
-    train_data: "DataLoader",
+    student: TwoHeadStudent,
+    train_data: DataLoader,
 ):
     optimizer = th.optim.SGD(student.trainable_parameters(lr=1), lr=1)
     loss_fn = nn.MSELoss()

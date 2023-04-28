@@ -1,7 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import torch
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
-from src.tooling.architectures import *
+
+from src.tooling.architectures import DoubleTeacher
+from src.tooling.architectures import TwoHeadStudent
 from src.tooling.data.dataset import SupervisedLearingDataset
 
 N = 10_000
@@ -26,9 +30,9 @@ def train_epoch(
     student.train()
     # Metrics
     running_train_loss = []
-    for X_batch, y_batch in train_loader:
+    for x_batch, y_batch in train_loader:
         optimizer.zero_grad()
-        out = student(X_batch, return_both_heads=True)[head]
+        out = student(x_batch, return_both_heads=True)[head]
         loss = loss_fn(out, y_batch.view((1, 1)).detach())
         loss.backward()
         optimizer.step()
@@ -41,7 +45,7 @@ def evaluate_on_test(
 ):
     with torch.no_grad():
         student.train(False)
-        return loss_fn(student(dataset.X_test)[head], dataset.y_test).mean().item()
+        return loss_fn(student(dataset.x_test)[head], dataset.y_test).mean().item()
 
 
 def train_first_head(*, student: TwoHeadStudent, dataset: SupervisedLearingDataset):
@@ -120,7 +124,7 @@ def train_second_head(
 def get_teacher_dataset(*, double_teacher: DoubleTeacher, head: int):
     X1 = torch.normal(0.0, 1.0, size=(N, INPUT_DIMENSION))
     y1 = double_teacher(X1)[head]
-    return SupervisedLearingDataset(X=X1, y=y1, train_proportion=TRAIN_PROPORTION)
+    return SupervisedLearingDataset(x=X1, y=y1, train_proportion=TRAIN_PROPORTION)
 
 
 def contiual_learning_experiment():

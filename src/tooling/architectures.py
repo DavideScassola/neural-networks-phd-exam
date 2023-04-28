@@ -8,6 +8,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import Union
+from warnings import warn
 
 import torch as th
 from activations.serf import SERF
@@ -81,6 +82,13 @@ class TwoHeadStudent(nn.Module):
 
         return params
 
+    def train(self, mode: bool = True):
+        # Make sure (only) the active head is trainable/trained
+        self.neck.train(mode)
+        self.heads[int(self._switch)].train(mode)
+        self.fxout.train(mode)
+        self.heads[int(not self._switch)].train(False)
+
     def forward(
         self, x: Tensor, return_both_heads
     ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
@@ -111,7 +119,7 @@ class DoubleTeacher(nn.Module):
         out_size: int,
         init_features_from: Optional[Tuple[Tensor, Tensor]] = None,
         activation_fx_module=SERF(),
-    ):
+    ) -> None:
         super().__init__()
 
         self.t1_features = nn.Linear(in_size, hid_size, bias=False)
@@ -141,27 +149,39 @@ class DoubleTeacher(nn.Module):
 
         self._switch: bool = True
         self.flip_switch()
+        self.train(False)
+
+    def train(self, mode: bool = False) -> nn.Module:
+        if mode:
+            warn(
+                f"DoubleTeacher is not trainable, ignoring train(mode={mode})",
+                RuntimeWarning,
+            )
+        for module in self.children():
+            module.train(False)
+            model_reqgrad_(module, False)
+        return self
 
     def flip_switch(self) -> None:
         self._switch: bool = not self._switch
-        model_reqgrad_(self.school[int(not self._switch)], False)
 
     def forward(
         self, x: Tensor, return_both_teachers
     ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
-        xpost = self.school[int(self._switch)](x)
+        with th.no_grad():
+            xpost = self.school[int(self._switch)](x)
 
-        if return_both_teachers:
-            xpre = self.school[int(not self._switch)](x)
-            if self._switch:
-                return xpre, xpost
+            if return_both_teachers:
+                xpre = self.school[int(not self._switch)](x)
+                if self._switch:
+                    return xpre, xpost
+                else:
+                    return xpost, xpre
             else:
-                return xpost, xpre
-        else:
-            return xpost
+                return xpost
 
 
-def goldt_student(out_size: int) -> DoubleTeacher:
+def goldt_student(out_size: int) -> TwoHeadStudent:
     return TwoHeadStudent(500, 2, out_size)
 
 
@@ -169,7 +189,9 @@ def goldt_school(out_size: int) -> DoubleTeacher:
     return DoubleTeacher(500, 1, out_size)
 
 
-def goldt_school_from_overlap(out_size: int, overlap: Tensor) -> DoubleTeacher:
+def goldt_school_from_overlap(
+    out_size: int, overlap: Union[int, float, Tensor]
+) -> DoubleTeacher:
     return DoubleTeacher(
         500, 1, out_size, init_features_from=tensor_pair_from_overlap(overlap, 500)
     )
