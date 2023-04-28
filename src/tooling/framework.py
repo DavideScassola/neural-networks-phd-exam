@@ -9,8 +9,6 @@ from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-# from architectures import DoubleTeacher
-
 
 def teacher_input_data(data_size: int = 1000, device: Optional[str] = None) -> Tensor:
     """Generate iid vectors to be fed to the teacher network."""
@@ -33,8 +31,14 @@ def teacher_dataset(data_size: int, overlap: Tensor) -> DataLoader:
 
     for input in input_data:
         teacher_labels = teachers(input.view((1, input.size()[0])), True)
-        first_labels += teacher_labels[0]
-        second_labels += teacher_labels[1]
+        first_labels += teacher_labels
+
+    # Get input iid gaussian distributed vectors
+    input_data = teacher_input_data(data_size)
+
+    for input in input_data:
+        teacher_labels = teachers(input.view((1, input.size()[0])), True)
+        second_labels += teacher_labels
 
     first_labels = th.Tensor(first_labels)
     second_labels = th.Tensor(second_labels)
