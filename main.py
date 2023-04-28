@@ -20,6 +20,7 @@ OUTPUT_DIMENSION = 1
 TRAIN_PROPORTION = 0.8
 BATCH_SIZE = 500
 TEST_SIZE = 1000
+LABELS_NOISE_STD = 0.01
 FIRST_HEAD_BATCHES = N // BATCH_SIZE
 SECOND_HEAD_BATCHES = FIRST_HEAD_BATCHES
 
@@ -43,7 +44,9 @@ def train(
     losses = {"first_head":[], "second_head":[]}
 
     for _ in range(batches):
-        x_batch, y_batch = teacher.sample_batch(n=BATCH_SIZE)
+        x_batch, y_batch = teacher.sample_batch(
+            n=BATCH_SIZE, output_noise_std=LABELS_NOISE_STD
+        )
         optimizer.zero_grad()
         out1, out2 = student(x_batch, return_both_heads=True)
         loss1, loss2 = loss_fn(out1, y_batch), loss_fn(out2, y_batch)
@@ -66,7 +69,7 @@ def evaluate_on_test(
     return_both_heads: bool,
 ):
     """Evaluate the student network on the teacher labels."""
-    
+
     loss_fn = nn.MSELoss()
 
     with torch.no_grad():
@@ -75,14 +78,12 @@ def evaluate_on_test(
         if not return_both_heads:
             # Only when testing first head
             x_test, y_test = double_teacher.sample_batch(
-                TEST_SIZE, return_both_teachers=False
+                TEST_SIZE, return_both_teachers=False, output_noise_std=LABELS_NOISE_STD
             )
-            return (
-                loss_fn(student(x_test, return_both_heads=False), y_test).item()
-            )
+            return loss_fn(student(x_test, return_both_heads=False), y_test).item()
         else:
             x_test, y_test1, y_test2 = double_teacher.sample_batch(
-                TEST_SIZE, return_both_teachers=True
+                TEST_SIZE, return_both_teachers=True, output_noise_std=LABELS_NOISE_STD
             )
             out1, out2 = student(x_test, return_both_heads=True)
             loss1 = loss_fn(out1, y_test1).item()
@@ -97,7 +98,11 @@ def train_student(
     loss_fn = nn.MSELoss()
 
     train_losses = train(
-        student=student, optimizer=optimizer, teacher=double_teacher, loss_fn=loss_fn, batches=FIRST_HEAD_BATCHES
+        student=student,
+        optimizer=optimizer,
+        teacher=double_teacher,
+        loss_fn=loss_fn,
+        batches=FIRST_HEAD_BATCHES,
     )
 
     return train_losses
@@ -154,8 +159,8 @@ def contiual_learning_experiment(*, overlap=0.0):
     )
     
     # plt.cla()
-    # plt.plot(training_losses_post_switch["first_head"], label = "first head")
-    # plt.plot(training_losses_post_switch["second_head"], label = "second head")
+        # plt.plot(training_losses_post_switch["first_head"], label = "first head")
+        # plt.plot(training_losses_post_switch["second_head"], label = "second head")
     # plt.legend()
     # plt.title("Training losses after the switch in student heads")
     # plt.savefig('post_switch.png')
