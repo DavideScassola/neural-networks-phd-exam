@@ -185,20 +185,19 @@ class DoubleTeacher(nn.Module):
                 return xpost
             
     def sample_batch(self, n: int, return_both_teachers: bool = False):
-        """Generate iid vectors to be fed to the teacher network."""
+        """Generate iid vectors and associate labels from teacher network."""
         
         X1 = th.normal(0.0, 1.0, size=(n, self.in_size)) # TODO: check this
         if not return_both_teachers:
             y1 = self(X1, return_both_teachers=return_both_teachers)
-            #y1 += th.randn(y1.size())
+            # y1 += th.randn(y1.size())
             return X1, y1
         else:
             y1, y2 = self(X1, return_both_teachers=return_both_teachers)
-            #y1 += th.randn(y1.size())
-            #y2 += th.randn(y2.size())
+            # y1 += th.randn(y1.size())
+            # y2 += th.randn(y2.size())
             return X1, y1, y2
             
-
 
 def goldt_student(out_size: int) -> TwoHeadStudent:
     return TwoHeadStudent(500, 2, out_size)

@@ -9,18 +9,21 @@ from src.tooling.architectures import TwoHeadStudent
 from src.tooling.data.dataset import SupervisedLearingDataset
 from src.tooling.architectures import tensor_pair_from_overlap
 import matplotlib.pyplot as plt
+import seaborn as sns
 import random
 
-N = 1_000_000
+N = 2_000_000
 INPUT_DIMENSION = 500
 TEACHER_HIDDEN_UNITS = 1
 STUDENT_HIDDEN_UNITS = 2
 OUTPUT_DIMENSION = 1
 TRAIN_PROPORTION = 0.8
-BATCH_SIZE = 320
+BATCH_SIZE = 500
 TEST_SIZE = 1000
 FIRST_HEAD_BATCHES = N // BATCH_SIZE
 SECOND_HEAD_BATCHES = FIRST_HEAD_BATCHES
+
+sns.set_palette('viridis')
 
 
 def train(
@@ -30,28 +33,28 @@ def train(
     loss_fn,
     batches: int,
     teacher: DoubleTeacher,
+
 ):
-    """Training epoch for the student network. Specify the head [0,1] to be trained."""
+    """Training for the student network."""
 
     student.train()
 
     # Metrics
-    losses = []
-    
-    if student._switch:
-        pass
+    losses = {"first_head":[], "second_head":[]}
 
     for _ in range(batches):
         x_batch, y_batch = teacher.sample_batch(n=BATCH_SIZE)
         optimizer.zero_grad()
-        out = student(x_batch, return_both_heads=False)
-        loss = loss_fn(out, y_batch)
+        out1, out2 = student(x_batch, return_both_heads=True)
+        loss1, loss2 = loss_fn(out1, y_batch), loss_fn(out2, y_batch)
+        loss = loss1 if not student._switch else loss2
         loss.backward()
         optimizer.step()
-        losses.append(loss.item())
+        losses["first_head"].append(loss1.item())
+        losses["second_head"].append(loss2.item())
         
-        if random.random() > 0.95:
-            print(f"{loss.item()=}")
+        # if random.random() > 0.95:
+        #     print(f"{loss.item()=}")
 
     return losses
 
@@ -88,9 +91,7 @@ def evaluate_on_test(
 
 
 def train_student(
-    *,
-    student: TwoHeadStudent,
-    double_teacher: DoubleTeacher,
+    *, student: TwoHeadStudent, double_teacher: DoubleTeacher,
 ):
     optimizer = torch.optim.SGD(student.trainable_parameters(lr=1), lr=1)
     loss_fn = nn.MSELoss()
@@ -100,15 +101,6 @@ def train_student(
     )
 
     return train_losses
-
-
-def get_teacher_dataset(*, double_teacher: DoubleTeacher, teacher_index: int):
-    """Generate iid vectors to be fed to the teacher network."""
-
-    X1 = torch.normal(0.0, 1.0, size=(N, INPUT_DIMENSION))
-    y1 = double_teacher(X1, return_both_teachers=True)[teacher_index]
-    y1 += torch.randn(y1.size())
-    return SupervisedLearingDataset(x=X1, y=y1, train_proportion=TRAIN_PROPORTION)
 
 
 def overlapped_double_teacher(
@@ -136,7 +128,7 @@ def contiual_learning_experiment(*, overlap=0.0):
         hid_size=STUDENT_HIDDEN_UNITS,
     )
 
-    training_losses = train_student(
+    training_losses_pre_switch = train_student(
         student=student, double_teacher=double_teacher
     )
 
@@ -144,14 +136,16 @@ def contiual_learning_experiment(*, overlap=0.0):
         student=student, double_teacher=double_teacher, return_both_heads=False
     )
     
-    plt.plot(training_losses, label = "pre switch")
-    plt.legend()
-    plt.savefig('pre_switch.png')
+    # plt.plot(training_losses_pre_switch["first_head"], label = "first head")
+    # plt.plot(training_losses_pre_switch["second_head"], label = "second head")
+    # plt.legend()
+    # plt.title("Training losses before the switch in student heads")
+    # plt.savefig('pre_switch.png')
         
     student.flip_switch()
     double_teacher.flip_switch()
 
-    training_losses = train_student(
+    training_losses_post_switch = train_student(
         student=student, double_teacher=double_teacher
     )
     
@@ -159,18 +153,44 @@ def contiual_learning_experiment(*, overlap=0.0):
         student=student, double_teacher=double_teacher, return_both_heads=True
     )
     
-    plt.cla()
-    plt.plot(training_losses, label = "post switch")
-    plt.legend()
-    plt.savefig('post_switch.png')
-    
+    # plt.cla()
+    # plt.plot(training_losses_post_switch["first_head"], label = "first head")
+    # plt.plot(training_losses_post_switch["second_head"], label = "second head")
+    # plt.legend()
+    # plt.title("Training losses after the switch in student heads")
+    # plt.savefig('post_switch.png')
+
+
+    # plt.cla()
+    # plt.plot(training_losses_pre_switch["first_head"]+training_losses_post_switch["first_head"], label = "first head")
+    # plt.plot(training_losses_pre_switch["second_head"]+training_losses_post_switch["second_head"], label = "second head")
+    # plt.axvline(x = FIRST_HEAD_BATCHES, color = 'm', label="switch", linewidth=1.0)
+    # plt.legend()
+    # plt.yscale('log')
+    # plt.title("Training losses for student heads")
+    # plt.savefig('whole_training.png')
     
     print(f"{test_loss1_pre_switch=}")
     print(f"{test_loss1_post_switch=}")
     print(f"{test_loss2_post_switch=}")
 
+    return (training_losses_pre_switch["first_head"]+training_losses_post_switch["first_head"], training_losses_pre_switch["second_head"]+training_losses_post_switch["second_head"])
+
 def main():
-    contiual_learning_experiment(overlap=1.0)
+
+    fig, axes = plt.subplots(1,2,figsize=(20, 10))
+    sm = plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(vmin=0, vmax=1))
+
+    for overlap in list(torch.arange(0,1.1, 0.1)):
+        first_head_losses, second_head_losses = contiual_learning_experiment(overlap=overlap)
+        axes[0].plot(first_head_losses, linewidth=1.0)
+        axes[0].set_yscale('log')
+        axes[1].plot(second_head_losses, linewidth=1.0)
+        axes[1].set_yscale('log')
+        # plt.show()
+    
+    plt.colorbar(sm, ax=axes)
+    plt.savefig('whole_training.png', dpi=140)
 
 
 if __name__ == "__main__":
