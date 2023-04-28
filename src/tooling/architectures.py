@@ -10,10 +10,9 @@ from typing import Tuple
 from typing import Union
 
 import torch as th
+from activations.serf import SERF
 from torch import nn
 from torch import Tensor
-
-from activations.serf import SERF
 from util.overlap import tensor_pair_from_overlap
 
 
@@ -47,7 +46,7 @@ class TwoHeadStudent(nn.Module):
             ]
         )
         for head in self.heads:
-            nn.init.normal_(head.weight, 0., 0.001)
+            nn.init.normal_(head.weight, 0.0, 0.001)
 
         self.fxout: nn.Module = copy.deepcopy(activation_fx_module)
 
@@ -66,7 +65,12 @@ class TwoHeadStudent(nn.Module):
         if do_scale:
             if lr is None:
                 raise ValueError("lr must be specified if do_scale is True")
-            params += [{"params": self.heads[int(self._switch)].parameters(), "lr": lr / self.in_size}]
+            params += [
+                {
+                    "params": self.heads[int(self._switch)].parameters(),
+                    "lr": lr / self.in_size,
+                }
+            ]
 
         else:
             params += [{"params": self.heads[int(self._switch)].parameters()}]
@@ -123,7 +127,7 @@ class DoubleTeacher(nn.Module):
             nn.Linear(hid_size, out_size, bias=False),
             copy.deepcopy(activation_fx_module),
         )
-        nn.init.normal_(self.teacher_1[2].weight, 0., 1.)
+        nn.init.normal_(self.teacher_1[2].weight, 0.0, 1.0)
 
         self.teacher_2 = nn.Sequential(
             self.t2_features,
@@ -131,7 +135,7 @@ class DoubleTeacher(nn.Module):
             nn.Linear(hid_size, out_size, bias=False),
             copy.deepcopy(activation_fx_module),
         )
-        nn.init.normal_(self.teacher_2[2].weight, 0., 1.)
+        nn.init.normal_(self.teacher_2[2].weight, 0.0, 1.0)
 
         self.school = nn.ModuleList([self.teacher_1, self.teacher_2])
 
@@ -170,12 +174,13 @@ def goldt_school_from_overlap(out_size: int, overlap: Tensor) -> DoubleTeacher:
         500, 1, out_size, init_features_from=tensor_pair_from_overlap(overlap, 500)
     )
 
+
 # TEST
-if __name__ == '__main__':
+if __name__ == "__main__":
     double_teacher = goldt_school(2)
     student = goldt_student(2)
     overlapped_teachers = goldt_school_from_overlap(1, overlap=0.5)
-    dummy_data = th.normal(0., 1., size=(1, 500))
+    dummy_data = th.normal(0.0, 1.0, size=(1, 500))
     double_teacher(dummy_data, False)
     double_teacher(dummy_data, True)
     student(dummy_data, False)

@@ -1,26 +1,23 @@
+# -*- coding: utf-8 -*-
 from typing import Optional
 
+import architectures as arc
 import torch as th
+from architectures import DoubleTeacher
+from architectures import TwoHeadStudent
 from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-import architectures as arc
-from architectures import TwoHeadStudent, DoubleTeacher
+
+def teacher_input_data(data_size: int = 1000, device: Optional[str] = None) -> "Tensor":
+    """Generate iid vectors to be fed to the teacher network."""
+
+    return th.normal(0.0, 1.0, size=(data_size, 500), device=device)
 
 
-def teacher_input_data(
-    data_size: int = 1000, device: Optional[str] = None
-) -> 'Tensor':
-    """ Generate iid vectors to be fed to the teacher network. """
-
-    return th.normal(0., 1., size=(data_size, 500), device=device)
-
-
-def teacher_dataset(
-    data_size: int, overlap: 'Tensor'
-)  -> 'DataLoader':
-    """ Generate labels to be used by the student during training or testing phases. """
+def teacher_dataset(data_size: int, overlap: "Tensor") -> "DataLoader":
+    """Generate labels to be used by the student during training or testing phases."""
 
     # Store the labels generated from both teachers
     first_labels = []
@@ -33,10 +30,10 @@ def teacher_dataset(
     input_data = teacher_input_data(data_size)
 
     for input in input_data:
-        teacher_labels = teachers(input.view((1,input.size()[0])), True)
+        teacher_labels = teachers(input.view((1, input.size()[0])), True)
         first_labels += teacher_labels[0]
         second_labels += teacher_labels[1]
-    
+
     first_labels = th.Tensor(first_labels)
     second_labels = th.Tensor(second_labels)
 
@@ -44,14 +41,14 @@ def teacher_dataset(
 
 
 def student_training(
-    student: 'TwoHeadStudent', train_data: 'DataLoader',
+    student: "TwoHeadStudent",
+    train_data: "DataLoader",
 ):
-
     optimizer = th.optim.SGD(student.trainable_parameters(lr=1), lr=1)
     loss_fn = nn.MSELoss()
 
     # Metrics
-    running_loss = 0.
+    running_loss = 0.0
 
     student.train()
     for data, label in train_data:
@@ -63,12 +60,12 @@ def student_training(
 
         running_loss += loss.item()
 
-    avg_loss = running_loss/len(train_data.dataset)
-    
+    avg_loss = running_loss / len(train_data.dataset)
+
     return avg_loss
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     teacher = arc.goldt_school(1)
     student = arc.goldt_student(1)
     teacher_data = teacher_input_data(5)
