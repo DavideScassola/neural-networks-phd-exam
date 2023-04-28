@@ -33,7 +33,7 @@ def train_epoch(
     for x_batch, y_batch in train_loader:
         optimizer.zero_grad()
         out = student(x_batch, return_both_heads=True)[head]
-        loss = loss_fn(out, y_batch.view((1, 1)).detach())
+        loss = loss_fn(out, y_batch)
         loss.backward()
         optimizer.step()
         running_train_loss.append(loss.item())
@@ -49,7 +49,7 @@ def evaluate_on_test(
     with torch.no_grad():
         student.train(False)
 
-        return loss_fn(student(dataset.x_test)[head], dataset.y_test).mean().item()
+        return loss_fn(student(dataset.x_test, return_both_heads=True)[head], dataset.y_test).mean().item()
 
 
 def train_first_head(
@@ -60,7 +60,7 @@ def train_first_head(
     optimizer = torch.optim.SGD(student.trainable_parameters(lr=1), lr=1)
     loss_fn = nn.MSELoss()
 
-    train_loader = dataset.get_train_loader(TRAIN_LOADER_PARAMS)
+    train_loader = dataset.get_train_loader(**TRAIN_LOADER_PARAMS)
 
     epoch_train_losses = []
     epoch_test_losses = []
@@ -99,7 +99,7 @@ def train_second_head(
     )  # TODO: change lr according to appendix
     loss_fn = nn.MSELoss()
 
-    train_loader = dataset_teacher2.get_train_loader(TRAIN_LOADER_PARAMS)
+    train_loader = dataset_teacher2.get_train_loader(**TRAIN_LOADER_PARAMS)
 
     epoch_train_losses = []
     epoch_test_losses_dataset1 = []
@@ -138,7 +138,7 @@ def get_teacher_dataset(
     """Generate iid vectors to be fed to the teacher network."""
 
     X1 = torch.normal(0.0, 1.0, size=(N, INPUT_DIMENSION))
-    y1 = double_teacher(X1)[head]
+    y1 = double_teacher(X1, return_both_teachers=True)[head]
     return SupervisedLearingDataset(x=X1, y=y1, train_proportion=TRAIN_PROPORTION)
 
 
@@ -170,3 +170,7 @@ def contiual_learning_experiment():
 
 def main():
     contiual_learning_experiment()
+
+
+if __name__ == '__main__':
+    main()

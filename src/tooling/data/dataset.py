@@ -29,4 +29,4 @@ class SupervisedLearingDataset:
     ) -> DataLoader:
         """ Return a DataLoader object containing the Supervised Learning Dataset """
 
-        return DataLoader(TensorDataset(self.x_train, self.x_test), **loader_kwargs)
+        return DataLoader(TensorDataset(self.x_train, self.y_train), **loader_kwargs)
