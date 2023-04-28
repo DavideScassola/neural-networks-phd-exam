@@ -15,14 +15,14 @@ TEACHER_HIDDEN_UNITS = 1
 STUDENT_HIDDEN_UNITS = 2
 OUTPUT_DIMENSION = 1
 TRAIN_PROPORTION = 0.8
-FIRST_HEAD_EPOCHS = 100
-SECOND_HEAD_EPOCHS = 100
+FIRST_HEAD_EPOCHS = 1
+SECOND_HEAD_EPOCHS = 1
 TRAIN_LOADER_PARAMS = dict(batch_size=32, shuffle=True)
 
 
 def train_epoch(
     *, student: TwoHeadStudent, optimizer: torch.optim.Optimizer,
-    train_loader: DataLoader, loss_fn, head: int,
+    train_loader: DataLoader, loss_fn
 ):
     """ Training epoch for the student network. Specify the head [0,1] to be trained. """
 
@@ -33,7 +33,7 @@ def train_epoch(
 
     for x_batch, y_batch in train_loader:
         optimizer.zero_grad()
-        out = student(x_batch, return_both_heads=True)[head]
+        out = student(x_batch, return_both_heads=False)
         loss = loss_fn(out, y_batch)
         loss.backward()
         optimizer.step()
@@ -71,8 +71,7 @@ def train_first_head(
             student=student,
             optimizer=optimizer,
             train_loader=train_loader,
-            loss_fn=loss_fn,
-            head=0,
+            loss_fn=loss_fn
         )
 
         test_loss = evaluate_on_test(
@@ -97,7 +96,7 @@ def train_second_head(
 
     optimizer = torch.optim.SGD(
         student.trainable_parameters(lr=1), lr=1
-    )  # TODO: change lr according to appendix
+    )
     loss_fn = nn.MSELoss()
 
     train_loader = dataset_teacher2.get_train_loader(**TRAIN_LOADER_PARAMS)
@@ -106,7 +105,7 @@ def train_second_head(
     epoch_test_losses_dataset1 = []
     epoch_test_losses_dataset2 = []
 
-    # student.flip_switch()
+    student.flip_switch()
     # TODO: Is this really necessary ?
 
     for _ in range(SECOND_HEAD_EPOCHS):
@@ -114,9 +113,9 @@ def train_second_head(
             student=student,
             optimizer=optimizer,
             train_loader=train_loader,
-            loss_fn=loss_fn,
-            head=0,
+            loss_fn=loss_fn
         )
+
         dataset1_test_loss = evaluate_on_test(
             student=student, dataset=dataset_teacher1, loss_fn=loss_fn, head=0
         )
@@ -139,7 +138,8 @@ def get_teacher_dataset(
     """Generate iid vectors to be fed to the teacher network."""
 
     X1 = torch.normal(0.0, 1.0, size=(N, INPUT_DIMENSION))
-    y1 = double_teacher(X1, return_both_heads=True)[teacher_index]
+    y1 = double_teacher(X1, return_both_teachers=True)[teacher_index]
+    y1 += torch.randn(y1.size())
     return SupervisedLearingDataset(x=X1, y=y1, train_proportion=TRAIN_PROPORTION)
 
 

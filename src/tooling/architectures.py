@@ -126,8 +126,8 @@ class DoubleTeacher(nn.Module):
         self.t2_features = nn.Linear(in_size, hid_size, bias=False)
 
         if init_features_from is not None:
-            self.t1_features.weight.data = init_features_from[0]
-            self.t2_features.weight.data = init_features_from[1]
+            self.t1_features.weight.data = init_features_from[0].unsqueeze(0)
+            self.t2_features.weight.data = init_features_from[1].unsqueeze(0)
 
         self.teacher_1 = nn.Sequential(
             self.t1_features,
