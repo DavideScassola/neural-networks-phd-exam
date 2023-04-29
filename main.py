@@ -15,11 +15,10 @@ INPUT_DIMENSION = 500
 TEACHER_HIDDEN_UNITS = 1
 STUDENT_HIDDEN_UNITS = 2
 OUTPUT_DIMENSION = 1
-TRAIN_PROPORTION = 0.8
-BATCH_SIZE = 64
-TEST_SIZE = 1000
+BATCH_SIZE = 50
+TEST_SIZE = 5_000
 LABELS_NOISE_STD = 0.01
-FIRST_SGD_ITERATIONS = int(5e3)
+FIRST_SGD_ITERATIONS = 10_000
 SECOND_SGD_ITERATIONS = FIRST_SGD_ITERATIONS
 
 
@@ -35,7 +34,6 @@ def train(
     """Training for the student network."""
 
     loss_fn = nn.MSELoss()
-    student.train()
 
     # Metrics
     test_losses = {"index": [], "first_task": [], "second_task": []}
@@ -43,6 +41,7 @@ def train(
     test_evaluation_frequency = batches // number_of_tests
 
     for i in tqdm.tqdm(range(batches)):
+        student.train()
         x_batch, y_batch = teacher.sample_batch(
             n=BATCH_SIZE, output_noise_std=LABELS_NOISE_STD
         )
@@ -130,7 +129,7 @@ def common_sense_overlapped_double_teacher(
 
 
 def continual_learning_experiment(*, overlap=0.0, student: TwoHeadStudent):
-    torch.manual_seed(69)
+    #torch.manual_seed(69)
 
     double_teacher = common_sense_overlapped_double_teacher(
         in_size=INPUT_DIMENSION,
@@ -167,7 +166,8 @@ def main():
         hid_size=STUDENT_HIDDEN_UNITS,
     )
 
-    for overlap in (0.0, 0.2, 0.5, 0.8, 1.0):
+    #for overlap in (0.0, 0.2, 0.5, 0.8, 1.0):
+    for overlap in (0.0, 0.5, 1.0):
         print(f"running experiment for {overlap=}")
         test_losses_pre_switch, test_losses_post_switch = continual_learning_experiment(
             overlap=overlap, student=copy.deepcopy(original_student)
