@@ -238,5 +238,5 @@ typeshed/
 # WandB local files
 .wandb/
 
-# Images
-*.png
+# Plots
+plots/
