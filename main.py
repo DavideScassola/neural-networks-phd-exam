@@ -16,9 +16,9 @@ TEACHER_HIDDEN_UNITS = 1
 STUDENT_HIDDEN_UNITS = 2
 OUTPUT_DIMENSION = 1
 BATCH_SIZE = 50
-TEST_SIZE = 5_000
-LABELS_NOISE_STD = 0.01
-FIRST_SGD_ITERATIONS = 10_000
+TEST_SIZE = 3_000
+LABELS_NOISE_STD = 0.0
+FIRST_SGD_ITERATIONS = 2_000
 SECOND_SGD_ITERATIONS = FIRST_SGD_ITERATIONS
 
 
@@ -106,32 +106,9 @@ def overlapped_double_teacher(
         init_features_from=tensor_pair_from_overlap(overlap, in_size),
     )
 
-
-def apply_common_sense_overlap(x1: torch.Tensor, x2: torch.Tensor, *, overlap: float):
-    assert x1.shape == x2.shape, "x1 and x2 must have the same shape"
-    n = torch.numel(x1)
-    sample_indexes = torch.randperm(n)[: int(overlap * n)]
-    x1.flatten()[sample_indexes] = x2.flatten()[sample_indexes]
-
-
-def common_sense_overlapped_double_teacher(
-    *, in_size: int, out_size: int, hid_size: int, overlap: float
-) -> DoubleTeacher:
-    dt = DoubleTeacher(
-        in_size,
-        hid_size,
-        out_size,
-    )
-    apply_common_sense_overlap(
-        dt.t2_features.weight.data, dt.t1_features.weight.data, overlap=overlap
-    )
-    return dt
-
-
 def continual_learning_experiment(*, overlap=0.0, student: TwoHeadStudent):
-    #torch.manual_seed(69)
-
-    double_teacher = common_sense_overlapped_double_teacher(
+    torch.manual_seed(69)
+    double_teacher = overlapped_double_teacher(
         in_size=INPUT_DIMENSION,
         out_size=OUTPUT_DIMENSION,
         hid_size=TEACHER_HIDDEN_UNITS,
@@ -165,9 +142,9 @@ def main():
         out_size=OUTPUT_DIMENSION,
         hid_size=STUDENT_HIDDEN_UNITS,
     )
-
-    #for overlap in (0.0, 0.2, 0.5, 0.8, 1.0):
-    for overlap in (0.0, 0.5, 1.0):
+    
+    
+    for overlap in (0.0, 0.01, 0.02, 0.03, 0.05, 0.1, 0.8, 1.0):
         print(f"running experiment for {overlap=}")
         test_losses_pre_switch, test_losses_post_switch = continual_learning_experiment(
             overlap=overlap, student=copy.deepcopy(original_student)
