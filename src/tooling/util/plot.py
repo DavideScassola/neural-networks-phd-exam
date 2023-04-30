@@ -24,9 +24,10 @@ def training_trace_fig(trace: List[TrainingTrace]):
     )
 
     fig = make_subplots(
-        rows=1, cols=2, subplot_titles=("Task 1", "Task 2"), shared_yaxes=True
+        rows=1, cols=2, subplot_titles=("Task 1", "Task 2"), shared_yaxes=True, horizontal_spacing=0.25
     )
     for i in range(len(task_y_overlaps)):
+
         fig.add_trace(
             go.Scatter(
                 x=task_x_traces,
@@ -39,6 +40,27 @@ def training_trace_fig(trace: List[TrainingTrace]):
             row=1,
             col=1,
         )
+
+        fig.add_trace(
+            go.Scatter(
+                x=task_x_traces,
+                y=task_1_traces[i],
+                mode="markers",
+                marker=dict(size=0, 
+                            color="rgba(0,0,0,0)", 
+                            colorscale="viridis",
+                            showscale=True,
+                            cmin=-5,
+                            cmax=5,
+                            colorbar=dict(x=0.4, 
+                                        y=0.5,
+                                        len=1.0,thickness=15, tickvals=[-5, 5], ticktext=['0.0', '1.0'], outlinewidth=0)),
+                showlegend=False,
+            ),
+            row=1,
+            col=1,
+        )
+
         fig.add_trace(
             go.Scatter(
                 x=task_x_traces,
@@ -46,6 +68,26 @@ def training_trace_fig(trace: List[TrainingTrace]):
                 mode="lines",
                 name=f"overlap {task_y_overlaps[i]}",
                 line=dict(color=custom_colorscale_task2[i]),
+                showlegend=False,
+            ),
+            row=1,
+            col=2,
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=task_x_traces,
+                y=task_2_traces[i],
+                mode="markers",
+                marker=dict(size=0,
+                            color="rgba(0,0,0,0)", 
+                            colorscale="plasma",
+                            showscale=True,
+                            cmin=-5,
+                            cmax=5,
+                            colorbar=dict(x=1.02, 
+                                        y=0.5,
+                                        thickness=15, tickvals=[-5, 5], ticktext=['0.0', '1.0'], outlinewidth=0)),
                 showlegend=False,
             ),
             row=1,

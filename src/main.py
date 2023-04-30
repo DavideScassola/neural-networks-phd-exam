@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
+from copy import deepcopy
 import os
 from typing import Tuple
 
@@ -19,9 +20,9 @@ from tqdm.auto import tqdm
 
 
 # ------------------------------------------------------------------------------
-EXPERIMENT_SEED = np.random.randint(0, 2**32 - 1)
+EXPERIMENT_SEED = 2054 # np.random.randint(0, 2**32 - 1)
 OVERLAP_SEED = None
-RUN_OVERLAPS = [float(i) for i in np.linspace(0.0, 1.0, 50)]
+RUN_OVERLAPS = [float(i) for i in np.linspace(0.0, 1.0, 10)]
 
 IN_SIZE = 500
 OUT_SIZE = 1
@@ -32,8 +33,7 @@ INPUT_STD = 1.0
 LABELS_NOISE_STD = 0.01
 
 BATCH_SIZE = 64
-TEST_SIZE = 3 * 1024
-TRAIN_STEPS = 2048
+TRAIN_STEPS = 8192
 EVAL_EVERY = 20
 
 OPTIM = th.optim.SGD

@@ -51,12 +51,12 @@ def tensor_pair_from_angle(
     if seedwidth is not None:
         # Move import here because of lengthy import time
         import numpy as np
-        from pytorch_lightning.utilities.seed import isolate_rng
+        # from pytorch_lightning.utilities.seed import isolate_rng
 
-        with isolate_rng(include_cuda=True):
-            np.random.seed(seed=seedwidth)
-            th.manual_seed(seed=seedwidth)
-            rgen: Tensor = th.from_numpy(spsog(length).rvs())[:, 0:2].float().to(device)
+        # with isolate_rng(include_cuda=True):
+        np.random.seed(seed=seedwidth)
+        th.manual_seed(seed=seedwidth)
+        rgen: Tensor = th.from_numpy(spsog(length).rvs())[:, 0:2].float().to(device)
     else:
         rgen: Tensor = th.from_numpy(spsog(length).rvs())[:, 0:2].float().to(device)
 
