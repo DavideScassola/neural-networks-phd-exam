@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 from dataclasses import dataclass
 from typing import Tuple
+import os
 
 import plotly.graph_objects as go
 import torch as th
@@ -90,7 +91,7 @@ def continual_learning_run(overlap: float):
         print_overlap=overlap,
     )
 
-    # Flip student's heads
+    # Flip student's heads and switch task
     teacher.flip_switch()
     student.flip_switch()
 
@@ -171,6 +172,9 @@ def main_runner():
         fig.update_xaxes(title_text="step", row=1, col=j)
     fig.update_yaxes(title_text="", type="log", row=1, col=2)
     fig.update_yaxes(title_text="loss", type="log", row=1, col=1)
+
+    if not os.path.exists('../plots'):
+        os.makedirs('../plots')
 
     fig.write_image("../plots/tasks.png", scale=2.0)
 

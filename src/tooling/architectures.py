@@ -138,15 +138,13 @@ class DoubleTeacher(nn.Module):
         self.teacher_1 = nn.Sequential(
             self.t1_features,
             copy.deepcopy(activation_fx_module),
-            nn.Linear(hid_size, out_size, bias=False),
-            copy.deepcopy(activation_fx_module),
+            nn.Linear(hid_size, out_size, bias=False)
         )
 
         self.teacher_2 = nn.Sequential(
             self.t2_features,
             copy.deepcopy(activation_fx_module),
-            nn.Linear(hid_size, out_size, bias=False),
-            copy.deepcopy(activation_fx_module),
+            nn.Linear(hid_size, out_size, bias=False)
         )
 
         self.school = nn.ModuleList([self.teacher_1, self.teacher_2])
@@ -201,6 +199,7 @@ def double_teacher_from_overlap(
     activation_fx_module=ScaledERF(),
 ):
     """Create a DoubleTeacher model from a given overlap."""
+
     if overlap < 0.0 or overlap > 1.0:
         raise ValueError("overlap must be in [0.0, 1.0]")
 

@@ -68,6 +68,7 @@ def generate_labelled_input(
     which_teacher: Optional[int] = None,
     device: Optional[str] = None,
 ) -> Tuple[Tensor, Union[Tensor, Tuple[Tensor, Tensor]]]:
+
     with th.no_grad():
         # Sanity checks
         if return_both_teachers and which_teacher is not None:

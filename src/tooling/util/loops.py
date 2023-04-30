@@ -18,8 +18,13 @@ from .data import generate_labelled_input
 
 
 def train_student_one_step(
-    x: Tensor, y: Tensor, student: nn.Module, optimizer: Optimizer, criterion: Callable
+    x: Tensor, 
+    y: Tensor, 
+    student: nn.Module, 
+    optimizer: Optimizer, 
+    criterion: Callable
 ) -> float:
+
     student.train()
     optimizer.zero_grad()
     loss: Tensor = criterion(student(x, return_both_heads=False), y)
@@ -29,17 +34,21 @@ def train_student_one_step(
 
 
 def test_student(
-    x: Tensor, y: Union[Tensor, Tuple[Tensor, Tensor]], student: nn.Module, criterion
+    x: Tensor, 
+    y: Union[Tensor, Tuple[Tensor, Tensor]], 
+    student: nn.Module, 
+    criterion
 ) -> Union[float, Tuple[float, float]]:
+
     with th.no_grad():
         student.eval()
 
         if isinstance(y, tuple):
-            yhat = student(x, return_both_heads=True)
-            loss = criterion(yhat[0], y[0]).item(), criterion(yhat[1], y[1]).item()
+            y_hat = student(x, return_both_heads=True)
+            loss = criterion(y_hat[0], y[0]).item(), criterion(y_hat[1], y[1]).item()
         else:
-            yhat = student(x, return_both_heads=False)
-            loss = criterion(yhat, y).item()
+            y_hat = student(x, return_both_heads=False)
+            loss = criterion(y_hat, y).item()
 
         return loss
 
@@ -70,7 +79,7 @@ def train_student_head_otf(
     itseries = []
     lfseries = [[], []]
     print_overlap = "" if print_overlap is None else f"{print_overlap}"
-    for it in trange(train_steps, leave=False, desc=f"Training for overlap {print_overlap}, student head #{which_head}"):  # type: ignore
+    for it in trange(train_steps, leave=False, desc=f"Training for overlap {print_overlap}, student head #{which_head+1}"):  # type: ignore
         x, y = generate_labelled_input(
             teacher,
             batch_size,
@@ -81,6 +90,7 @@ def train_student_head_otf(
             which_teacher=which_head,
             device=device,
         )
+
         train_student_one_step(x, y, student, optim, criterion)
 
         if eval_every is not None and it % eval_every == 0:
