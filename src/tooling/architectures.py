@@ -138,13 +138,13 @@ class DoubleTeacher(nn.Module):
         self.teacher_1 = nn.Sequential(
             self.t1_features,
             copy.deepcopy(activation_fx_module),
-            nn.Linear(hid_size, out_size, bias=False)
+            nn.Linear(hid_size, out_size, bias=False),
         )
 
         self.teacher_2 = nn.Sequential(
             self.t2_features,
             copy.deepcopy(activation_fx_module),
-            nn.Linear(hid_size, out_size, bias=False)
+            nn.Linear(hid_size, out_size, bias=False),
         )
 
         self.school = nn.ModuleList([self.teacher_1, self.teacher_2])
@@ -197,6 +197,7 @@ def double_teacher_from_overlap(
     out_size: int,
     overlap: float,
     activation_fx_module=ScaledERF(),
+    seedwith: Optional[int] = None,
 ):
     """Create a DoubleTeacher model from a given overlap."""
 
@@ -207,7 +208,9 @@ def double_teacher_from_overlap(
         in_size,
         hid_size,
         out_size,
-        init_features_from=tensor_pair_from_overlap(overlap, in_size),
+        init_features_from=tensor_pair_from_overlap(
+            overlap, in_size, seedwidth=seedwith
+        ),
         activation_fx_module=activation_fx_module,
     )
 

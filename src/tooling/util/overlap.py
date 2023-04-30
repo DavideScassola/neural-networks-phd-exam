@@ -16,7 +16,10 @@ from torch import Tensor
 
 
 def tensor_pair_from_angle(
-    angle: Union[int, float, Tensor], length: int, device: Optional[str] = None
+    angle: Union[int, float, Tensor],
+    length: int,
+    device: Optional[str] = None,
+    seedwidth: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor]:
     """Generate a pair of normalized torch.Tensors, along directions forming given angle in radians."""
 
@@ -45,7 +48,17 @@ def tensor_pair_from_angle(
     vgen2: Tensor = th.tensor([sin(angle), cos(angle)], device=device)
 
     # Haar-harvested O(N) vectors
-    rgen: Tensor = th.from_numpy(spsog(length).rvs())[:, 0:2].float().to(device)
+    if seedwidth is not None:
+        # Move import here because of lengthy import time
+        import numpy as np
+        from pytorch_lightning.utilities.seed import isolate_rng
+
+        with isolate_rng(include_cuda=True):
+            np.random.seed(seed=seedwidth)
+            th.manual_seed(seed=seedwidth)
+            rgen: Tensor = th.from_numpy(spsog(length).rvs())[:, 0:2].float().to(device)
+    else:
+        rgen: Tensor = th.from_numpy(spsog(length).rvs())[:, 0:2].float().to(device)
 
     # Compute the pair
     v1: Tensor = rgen @ vgen1
@@ -56,7 +69,10 @@ def tensor_pair_from_angle(
 
 
 def tensor_pair_from_overlap(
-    overlap: Union[int, float, Tensor], length: int, device: Optional[str] = None
+    overlap: Union[int, float, Tensor],
+    length: int,
+    device: Optional[str] = None,
+    seedwidth: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor]:
     """Generate a pair of normalized torch.Tensors, with given cosine overlap."""
 
@@ -64,7 +80,7 @@ def tensor_pair_from_overlap(
     if not isinstance(overlap, Tensor):
         overlap: Tensor = th.tensor(overlap)
 
-    return tensor_pair_from_angle(th.acos(overlap), length, device)
+    return tensor_pair_from_angle(th.acos(overlap), length, device, seedwidth=seedwidth)
 
 
 # ------------------------------------------------------------------------------

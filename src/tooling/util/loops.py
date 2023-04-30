@@ -18,13 +18,8 @@ from .data import generate_labelled_input
 
 
 def train_student_one_step(
-    x: Tensor, 
-    y: Tensor, 
-    student: nn.Module, 
-    optimizer: Optimizer, 
-    criterion: Callable
+    x: Tensor, y: Tensor, student: nn.Module, optimizer: Optimizer, criterion: Callable
 ) -> float:
-
     student.train()
     optimizer.zero_grad()
     loss: Tensor = criterion(student(x, return_both_heads=False), y)
@@ -34,12 +29,8 @@ def train_student_one_step(
 
 
 def test_student(
-    x: Tensor, 
-    y: Union[Tensor, Tuple[Tensor, Tensor]], 
-    student: nn.Module, 
-    criterion
+    x: Tensor, y: Union[Tensor, Tuple[Tensor, Tensor]], student: nn.Module, criterion
 ) -> Union[float, Tuple[float, float]]:
-
     with th.no_grad():
         student.eval()
 

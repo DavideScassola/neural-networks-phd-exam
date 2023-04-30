@@ -1,33 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------------------------
-from dataclasses import dataclass
-from typing import Tuple
 import os
+from typing import Tuple
 
-import plotly.graph_objects as go
+import numpy as np
 import torch as th
-from plotly.colors import qualitative as pxcql
-from plotly.subplots import make_subplots
 from tooling.architectures import double_teacher_from_overlap
 from tooling.architectures import TwoHeadStudent
 from tooling.util import generate_labelled_input
 from tooling.util import train_student_head_otf
+from tooling.util import training_trace_fig
+from tooling.util import TrainingTrace
 from tqdm.auto import tqdm
 
 
 # ------------------------------------------------------------------------------
-@dataclass
-class TrainingTrace:
-    overlap: float
-    x: Tuple
-    y: Tuple[Tuple, Tuple]
-
-    def get_trace_task(self, task: int):
-        return self.x, self.y[task]
 
 
 # ------------------------------------------------------------------------------
+EXPERIMENT_SEED = np.random.randint(0, 2**32 - 1)
+OVERLAP_SEED = None
+RUN_OVERLAPS = [float(i) for i in np.linspace(0.0, 1.0, 50)]
+
 IN_SIZE = 500
 OUT_SIZE = 1
 TEACH_HID = 1
@@ -37,9 +32,9 @@ INPUT_STD = 1.0
 LABELS_NOISE_STD = 0.01
 
 BATCH_SIZE = 64
-TEST_SIZE = 2048
-TRAIN_STEPS = 5000
-EVAL_EVERY = 100
+TEST_SIZE = 3 * 1024
+TRAIN_STEPS = 2048
+EVAL_EVERY = 20
 
 OPTIM = th.optim.SGD
 LR = 1.0
@@ -51,9 +46,17 @@ DEVICE = "cpu"
 
 
 def continual_learning_run(overlap: float):
+    # Set seeds
+    np.random.seed(seed=EXPERIMENT_SEED)
+    th.manual_seed(seed=EXPERIMENT_SEED)
+
     # Instantiate teachers
     teacher = double_teacher_from_overlap(
-        IN_SIZE, TEACH_HID, OUT_SIZE, overlap=overlap
+        IN_SIZE,
+        TEACH_HID,
+        OUT_SIZE,
+        overlap=overlap,
+        seedwith=OVERLAP_SEED,
     ).to(DEVICE)
 
     # Generate test set
@@ -131,51 +134,12 @@ def continual_learning_experiment(overlaps: Tuple[float, ...]):
 
 
 def main_runner():
-    cle = continual_learning_experiment(overlaps=(0.0, 0.25, 0.5, 0.75, 1.0))
+    cle = continual_learning_experiment(overlaps=RUN_OVERLAPS)
 
-    task_x_traces = cle[0].x
-    task_y_overlaps = tuple([elem.overlap for elem in cle])
-    task_1_traces = tuple([elem.get_trace_task(0)[1] for elem in cle])
-    task_2_traces = tuple([elem.get_trace_task(1)[1] for elem in cle])
+    if not os.path.exists("../plots"):
+        os.makedirs("../plots")
 
-    # ------------------------------------------------------------------------------
-
-    fig = make_subplots(
-        rows=1, cols=2, subplot_titles=("Task 1", "Task 2"), shared_yaxes=True
-    )
-    for i in range(len(task_y_overlaps)):
-        fig.add_trace(
-            go.Scatter(
-                x=task_x_traces,
-                y=task_1_traces[i],
-                mode="lines",
-                name=f"overlap {task_y_overlaps[i]}",
-                line=dict(color=pxcql.Vivid[i]),
-            ),
-            row=1,
-            col=1,
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=task_x_traces,
-                y=task_2_traces[i],
-                mode="lines",
-                name=f"overlap {task_y_overlaps[i]}",
-                line=dict(color=pxcql.Vivid[i]),
-                showlegend=False,
-            ),
-            row=1,
-            col=2,
-        )
-
-    for j in (1, 2):
-        fig.update_xaxes(title_text="step", row=1, col=j)
-    fig.update_yaxes(title_text="", type="log", row=1, col=2)
-    fig.update_yaxes(title_text="loss", type="log", row=1, col=1)
-
-    if not os.path.exists('../plots'):
-        os.makedirs('../plots')
-
+    fig = training_trace_fig(cle)
     fig.write_image("../plots/tasks.png", scale=2.0)
 
 
