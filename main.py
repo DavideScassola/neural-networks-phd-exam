@@ -20,7 +20,7 @@ TEST_SIZE = 3_000
 LABELS_NOISE_STD = 0.0
 FIRST_SGD_ITERATIONS = 2_000
 SECOND_SGD_ITERATIONS = FIRST_SGD_ITERATIONS
-
+LEARNING_RATE = 1.0
 
 def train(
     *,
@@ -83,7 +83,7 @@ def evaluate_on_test(
 def train_student(
     *, student: TwoHeadStudent, double_teacher: DoubleTeacher, test_set: tuple
 ):
-    optimizer = torch.optim.SGD(student.trainable_parameters(lr=1), lr=1)
+    optimizer = torch.optim.SGD(student.trainable_parameters(lr=LEARNING_RATE), lr=LEARNING_RATE)
 
     test_losses = train(
         student=student,
@@ -107,7 +107,7 @@ def overlapped_double_teacher(
     )
 
 def continual_learning_experiment(*, overlap=0.0, student: TwoHeadStudent):
-    torch.manual_seed(69)
+    torch.manual_seed(689)
     double_teacher = overlapped_double_teacher(
         in_size=INPUT_DIMENSION,
         out_size=OUTPUT_DIMENSION,
@@ -144,7 +144,7 @@ def main():
     )
     
     
-    for overlap in (0.0, 0.01, 0.02, 0.03, 0.05, 0.1, 0.8, 1.0):
+    for overlap in (0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 0.8, 1.0):
         print(f"running experiment for {overlap=}")
         test_losses_pre_switch, test_losses_post_switch = continual_learning_experiment(
             overlap=overlap, student=copy.deepcopy(original_student)
